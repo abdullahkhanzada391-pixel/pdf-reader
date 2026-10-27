@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}{% if active_doc %}{{ active_doc.original_name }} - {% endif %}PDF Reader Workspace{% endblock %}
+{% block breadcrumb %}
+    <span class="text-muted">Workspace /</span> 
+    <span class="text-dark fw-semibold">{% if active_doc %}{{ active_doc.original_name }}{% else %}Reader{% endif %}</span>
+{% endblock %}
+{% block main_class %}p-0{% endblock %}
+
+{% block content %}
+{% if active_doc %}
+<div class="reader-workspace" id="readerWorkspace">
+    <!-- Mobile Tab Switcher Bar (< 992px) -->
+    <div class="reader-mobile-tab-bar d-flex d-lg-none" id="readerMobileTabBar">
+        <button type="button" class="reader-mobile-tab-btn active" data-view="viewer">
+            <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
+            <span>Viewer</span>
+        </button>
+        <button type="button" class="reader-mobile-tab-btn" data-view="ai">
+            <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+            <span>AI Assistant</span>
+        </button>
+        <button type="button" class="reader-mobile-tab-btn" data-view="pages">
+            <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+            <span>Pages ({{ active_doc.num_pages }})</span>
+        </button>
+    </div>
+
+    <!-- PANEL 1: Left Navigation & Thumbnails -->
+    <div class="reader-panel-nav" id="panelNav">
+        <div class="nav-panel-header">
+            <div class="text-truncate me-2" style="max-width: 170px;">
+                <span class="fw-semibold small text-dark d-block text-truncate" title="{{ active_doc.original_name }}">
+                    {{ active_doc.original_name }}
+                </span>
+                <span class="extra-small text-muted">{{ active_doc.num_pages }} Pages • {{ active_doc.formatted_size }}</span>
+            </div>
+            <button class="btn btn-sm btn-link text-secondary p-1 d-none d-lg-inline-block" id="btnCollapseLeft" title="Collapse panel">
+                <i data-lucide="panel-left-close" style="width: 18px; height: 18px;"></i>
+            </button>
+        </div>
+
+        <!-- Document Switcher -->
+        <div class="p-2 border-bottom bg-light">
+            <select class="form-select form-select-sm" id="readerDocSelect" title="Switch active PDF">
+                {% for d in documents %}
+                    <option value="{{ d.id }}" {% if d.id == active_doc.id %}selected{% endif %}>
+                        {{ d.original_name }} ({{ d.num_pages }} pgs)
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Page Thumbnail Navigator -->
+        <div class="nav-thumbnail-list" id="thumbnailList">
+            {% for i in range(1, active_doc.num_pages + 1) %}
+            <div class="page-thumb-item {% if i == 1 %}active{% endif %}" data-page="{{ i }}" id="thumbPage{{ i }}">
+                <div class="thumb-preview-box" id="thumbCanvasWrap{{ i }}">
+                    <span>Page {{ i }}</span>
+                </div>
+                <div class="page-thumb-label">Page {{ i }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- PANEL 2: Center PDF Viewer -->
+    <div class="reader-panel-viewer mobile-active" id="panelViewer">
+        <!-- PDF Viewer Toolbar -->
+        <div class="pdf-toolbar">
+            <div class="d-flex align-items-center gap-1">
+                <button class="btn btn-sm btn-link text-secondary p-1 d-none d-lg-inline-block" id="btnToggleLeft" title="Toggle Page Navigator">
+                    <i data-lucide="panel-left" style="width: 18px; height: 18px;"></i>
+                </button>
+                <div class="vr mx-1 my-2 d-none d-lg-block"></div>
+                <!-- Page Navigation -->
+                <button class="btn btn-sm btn-link text-secondary p-1" id="btnPrevPage" title="Previous Page">
+                    <i data-lucide="chevron-left" style="width: 18px; height: 18px;"></i>
+                </button>
+                <div class="d-flex align-items-center gap-1 extra-small text-secondary fw-semibold">
+                    <input type="number" id="currentPageInput" class="form-control form-control-sm text-center p-0" style="width: 38px; height: 26px; font-size: 0.8rem;" value="1" min="1" max="{{ active_doc.num_pages }}">
+                    <span>/</span>
+                    <span id="totalPagesSpan">{{ active_doc.num_pages }}</span>
+                </div>
+                <button class="btn btn-sm btn-link text-secondary p-1" id="btnNextPage" title="Next Page">
+                    <i data-lucide="chevron-right" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+
+            <!-- Zoom & Sizing Controls -->
+            <div class="d-flex align-items-center gap-1">
+                <button class="btn btn-sm btn-link text-secondary p-1" id="btnZoomOut" title="Zoom Out">
+                    <i data-lucide="zoom-out" style="width: 15px; height: 15px;"></i>
+                </button>
+                <span class="extra-small fw-semibold text-secondary" id="zoomLevelText" style="min-width: 38px; text-align: center;">100%</span>
+                <button class="btn btn-sm btn-link text-secondary p-1" id="btnZoomIn" title="Zoom In">
+                    <i data-lucide="zoom-in" style="width: 15px; height: 15px;"></i>
+                </button>
+                <div class="vr mx-1 my-2"></div>
+                <button class="btn btn-sm btn-link text-secondary p-1" id="btnFitWidth" title="Fit to Width">
+                    <i data-lucide="move-horizontal" style="width: 15px; height: 15px;"></i>
+                </button>
+                <button class="btn btn-sm btn-link text-secondary p-1 d-none d-sm-inline-block" id="btnFitPage" title="Fit to Page">
+                    <i data-lucide="maximize-2" style="width: 15px; height: 15px;"></i>
+                </button>
+            </div>
+
+            <!-- Right Actions: Print, Download, Fullscreen, Toggle AI -->
+            <div class="d-flex align-items-center gap-1">
+                <button class="btn btn-sm btn-link text-secondary p-1 d-none d-md-inline-block" id="btnPrintPdf" title="Print Document">
+                    <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
+                </button>
+                <a class="btn btn-sm btn-link text-secondary p-1" href="{{ url_for('view_document_file', document_id=active_doc.id) }}" download="{{ active_doc.original_name }}" title="Download PDF">
+                    <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                </a>
+                <button class="btn btn-sm btn-link text-secondary p-1 d-none d-md-inline-block" id="btnFullscreen" title="Fullscreen Mode">
+                    <i data-lucide="expand" style="width: 15px; height: 15px;"></i>
+                </button>
+                <div class="vr mx-1 my-2 d-none d-lg-block"></div>
+                <button class="btn btn-sm btn-link text-primary p-1 d-none d-lg-inline-block" id="btnToggleRight" title="Toggle AI Assistant">
+                    <i data-lucide="panel-right" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- PDF Page Viewport -->
+        <div class="pdf-viewport-container" id="pdfViewport">
+            <div id="pdfCanvasContainer">
+                <canvas id="pdfViewerCanvas" class="pdf-page-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL 3: Right AI Assistant Tabs -->
+    <div class="reader-panel-ai" id="panelAi">
+        <!-- AI Tabs Nav -->
+        <div class="ai-tabs-nav">
+            <button class="ai-tab-btn active" data-tab="chat">
+                <i data-lucide="message-square" style="width: 14px; height: 14px;"></i>
+                <span>Chat</span>
+            </button>
+            <button class="ai-tab-btn" data-tab="summary">
+                <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
+                <span>Summary</span>
+            </button>
+            <button class="ai-tab-btn" data-tab="key-points">
+                <i data-lucide="list-checks" style="width: 14px; height: 14px;"></i>
+                <span>Key Points</span>
+            </button>
+            <button class="ai-tab-btn" data-tab="notes">
+                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+                <span>Notes</span>
+            </button>
+        </div>
+
+        <!-- Tab 1: AI Chat -->
+        <div class="ai-tab-content-area" id="tabContentChat">
+            <div class="ai-chat-stream" id="readerChatStream">
+                <div class="msg-row assistant">
+                    <div class="msg-bubble assistant">
+                        <div class="small fw-semibold text-primary mb-1">DocuMind AI</div>
+                        <div class="markdown-body">
+                            I'm ready to answer questions about <strong>{{ active_doc.original_name }}</strong>. 
+                            Click on any <span class="citation-chip">[Page X]</span> source citation to jump right to that page in the PDF!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Suggested Prompts -->
+            <div class="mb-2" id="readerPrompts">
+                <div class="d-flex flex-wrap gap-1">
+                    <button type="button" class="btn btn-sm btn-light border py-1 px-2 extra-small text-secondary reader-prompt-btn">
+                        Summarize main points
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light border py-1 px-2 extra-small text-secondary reader-prompt-btn">
+                        Key rules & steps
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="ai-input-wrap">
+                <form id="readerChatForm" class="m-0">
+                    <div class="ai-input-box">
+                        <textarea class="ai-textarea" id="readerChatInput" rows="1" placeholder="Ask question about this PDF..."></textarea>
+                        <button type="submit" class="ai-send-btn" id="readerSendBtn" title="Send query">
+                            <i data-lucide="arrow-up" style="width: 16px; height: 16px;"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab 2: Document Summary -->
+        <div class="ai-tab-content-area d-none" id="tabContentSummary">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <select class="form-select form-select-sm" id="readerSummaryType" style="width: 170px;">
+                    <option value="detailed" selected>Detailed Summary</option>
+                    <option value="short">Short Executive</option>
+                    <option value="topics">Key Topics</option>
+                </select>
+                <button type="button" class="btn-primary-clean btn-sm py-1 px-3" id="btnGenReaderSummary">
+                    <span>Generate</span>
+                </button>
+            </div>
+            <div id="readerSummaryLoading" class="text-center py-4 d-none">
+                <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                <div class="extra-small text-muted">Generating document summary...</div>
+            </div>
+            <div class="p-3 bg-light rounded border flex-1 overflow-auto" id="readerSummaryContainer" style="display: none;">
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm btn-link text-secondary p-0 extra-small" id="btnCopySummary">
+                        <i data-lucide="copy" style="width: 12px; height: 12px;"></i> Copy
+                    </button>
+                </div>
+                <div class="markdown-body small" id="readerSummaryContent"></div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Key Points -->
+        <div class="ai-tab-content-area d-none" id="tabContentKeyPoints">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <span class="small text-secondary fw-semibold">Extract Important Highlights</span>
+                <button type="button" class="btn-primary-clean btn-sm py-1 px-3" id="btnGenReaderKeyPoints">
+                    <span>Extract</span>
+                </button>
+            </div>
+            <div id="readerKeyPointsLoading" class="text-center py-4 d-none">
+                <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                <div class="extra-small text-muted">Extracting key points from pages...</div>
+            </div>
+            <div class="p-3 bg-light rounded border flex-1 overflow-auto" id="readerKeyPointsContainer" style="display: none;">
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm btn-link text-secondary p-0 extra-small" id="btnCopyKeyPoints">
+                        <i data-lucide="copy" style="width: 12px; height: 12px;"></i> Copy
+                    </button>
+                </div>
+                <div class="markdown-body small" id="readerKeyPointsContent"></div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Document Notes -->
+        <div class="ai-tab-content-area d-none" id="tabContentNotes">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="small fw-semibold text-secondary">Document Notes</span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="extra-small text-muted" id="notesStatusText">Auto-saved</span>
+                    <button class="btn btn-sm btn-link text-secondary p-0 extra-small" id="btnCopyNotes" title="Copy Notes">
+                        <i data-lucide="copy" style="width: 13px; height: 13px;"></i>
+                    </button>
+                </div>
+            </div>
+            <textarea class="notes-editor-textarea" id="readerNotesTextarea" placeholder="Type notes, highlights, or thoughts about this document here... (Auto-saves automatically)">{{ initial_notes }}</textarea>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="p-5 text-center">
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i data-lucide="file-x"></i>
+        </div>
+        <div class="empty-state-title">No Document Selected</div>
+        <div class="empty-state-desc">Upload a PDF or select one from My Documents to open the PDF Reader Workspace.</div>
+        <button class="btn-primary-clean btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+            Upload PDF
+        </button>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if active_doc %}
+<script>
+    const PDF_URL = "{{ url_for('view_document_file', document_id=active_doc.id) }}";
+    const ACTIVE_DOC_ID = "{{ active_doc.id }}";
+    const TOTAL_PAGES = {{ active_doc.num_pages }};
+</script>
+<script src="{{ url_for('static', filename='js/reader.js') }}"></script>
+{% endif %}
+{% endblock %}

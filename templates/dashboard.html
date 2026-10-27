@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - DocuMind AI{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-page" style="max-width: 1080px; margin: 0 auto;">
+    <!-- Section A: Dashboard Header -->
+    <div class="dashboard-header mb-4">
+        <div>
+            <h1 class="dashboard-greeting" id="dynamicGreeting">Good morning!</h1>
+            <p class="dashboard-subgreeting">Your AI-powered document workspace.</p>
+        </div>
+    </div>
+
+    <!-- Section B: PDF Upload Section -->
+    <div class="card-clean p-4 mb-4" id="dashboardUploadCard">
+        <div class="upload-card-minimal" id="dashboardDropzone">
+            <input type="file" id="dashboardFileInput" accept=".pdf" multiple class="d-none">
+            <div class="upload-icon-wrap">
+                <i data-lucide="upload-cloud"></i>
+            </div>
+            <div class="upload-title">Upload your PDF</div>
+            <div class="upload-desc">Upload a document to start analyzing and chatting with AI.</div>
+            <button type="button" class="btn-primary-clean btn-sm" id="dashboardBrowseBtn">
+                <i data-lucide="file-plus" style="width: 14px; height: 14px;"></i>
+                <span>Browse Files</span>
+            </button>
+            <div class="text-muted extra-small mt-3">Accepts PDF files up to 32MB • Drag and drop supported</div>
+        </div>
+
+        <div class="mt-3 d-none" id="dashboardUploadProgress">
+            <div class="d-flex justify-content-between small text-secondary mb-1">
+                <span id="dashboardProgressText">Uploading and extracting text...</span>
+                <span id="dashboardProgressPercent">40%</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" id="dashboardProgressBar" style="width: 40%; background-color: var(--primary);"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section C: Recent Documents -->
+    <div class="card-clean">
+        <div class="p-3 px-4 border-bottom d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+                <i data-lucide="clock" style="width: 16px; height: 16px; color: var(--text-secondary);"></i>
+                <h6 class="fw-bold mb-0 fs-6">Recent Documents</h6>
+            </div>
+            {% if recent_docs %}
+            <a href="{{ url_for('documents') }}" class="small text-secondary fw-medium">
+                View all in Library ({{ stats.total_documents }})
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="p-0">
+            {% if recent_docs %}
+                <div class="table-responsive">
+                    <table class="table-clean">
+                        <thead>
+                            <tr>
+                                <th>DOCUMENT NAME</th>
+                                <th class="d-none d-sm-table-cell">PAGES</th>
+                                <th class="d-none d-md-table-cell">FILE SIZE</th>
+                                <th class="d-none d-lg-table-cell">UPLOADED</th>
+                                <th class="text-end" style="width: 80px;">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc in recent_docs %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2 gap-sm-3">
+                                        <div class="doc-file-icon">
+                                            <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                                        </div>
+                                        <div class="text-truncate" style="max-width: 280px;">
+                                            <a href="{{ url_for('reader', doc_id=doc.id) }}" class="fw-semibold text-dark text-decoration-none d-block text-truncate">
+                                                {{ doc.original_name }}
+                                            </a>
+                                            <span class="d-sm-none text-muted extra-small d-block">{{ doc.num_pages }} pages • {{ doc.formatted_size }}</span>
+                                            {% if doc.is_scanned %}
+                                                <span class="badge bg-warning-subtle text-warning extra-small">Scanned / Image</span>
+                                            {% else %}
+                                                <span class="text-muted extra-small d-none d-sm-inline">{{ doc.total_chunks }} chunks extracted</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="d-none d-sm-table-cell">
+                                    <span class="small text-secondary fw-medium">{{ doc.num_pages }} pages</span>
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    <span class="small text-secondary">{{ doc.formatted_size }}</span>
+                                </td>
+                                <td class="d-none d-lg-table-cell">
+                                    <span class="small text-muted">{{ doc.created_at[:10] }}</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-secondary p-1" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i data-lucide="more-horizontal" style="width: 18px; height: 18px;"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-clean dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item-clean" href="{{ url_for('reader', doc_id=doc.id) }}">
+                                                    <i data-lucide="book-open" style="width: 15px; height: 15px;"></i>
+                                                    <span>Open PDF</span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item-clean" href="{{ url_for('chat', doc_id=doc.id) }}">
+                                                    <i data-lucide="message-square" style="width: 15px; height: 15px;"></i>
+                                                    <span>AI Chat</span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item-clean w-100 border-0 bg-transparent text-start btn-trigger-rename" data-doc-id="{{ doc.id }}" data-doc-name="{{ doc.original_name }}">
+                                                    <i data-lucide="edit-3" style="width: 15px; height: 15px;"></i>
+                                                    <span>Rename</span>
+                                                </button>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item-clean" href="{{ url_for('view_document_file', document_id=doc.id) }}" download="{{ doc.original_name }}">
+                                                    <i data-lucide="download" style="width: 15px; height: 15px;"></i>
+                                                    <span>Download</span>
+                                                </a>
+                                            </li>
+                                            <li><hr class="dropdown-divider my-1"></li>
+                                            <li>
+                                                <button class="dropdown-item-clean text-danger w-100 border-0 bg-transparent text-start btn-delete-doc" data-doc-id="{{ doc.id }}" data-doc-name="{{ doc.original_name }}">
+                                                    <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                                    <span>Delete</span>
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i data-lucide="file-x" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="empty-state-title">No documents uploaded yet</div>
+                    <div class="empty-state-desc">Upload your first PDF document to read, summarize, and chat with AI.</div>
+                    <button class="btn-primary-clean btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i data-lucide="upload" style="width: 15px; height: 15px;"></i>
+                        <span>Upload PDF</span>
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Dynamic greeting based on time of day
+    const greetingEl = document.getElementById("dynamicGreeting");
+    if (greetingEl) {
+        const hour = new Date().getHours();
+        if (hour < 12) {
+            greetingEl.textContent = "Good morning!";
+        } else if (hour < 18) {
+            greetingEl.textContent = "Good afternoon!";
+        } else {
+            greetingEl.textContent = "Good evening!";
+        }
+    }
+
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}

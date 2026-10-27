@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}AI Chat - DocuMind AI{% endblock %}
+{% block breadcrumb %}AI Chat{% endblock %}
+
+{% block content %}
+<div class="chat-page-container" style="max-width: 960px; margin: 0 auto; height: calc(100vh - var(--topbar-height) - 56px); display: flex; flex-direction: column;">
+    <!-- Minimal Header Bar -->
+    <div class="card-clean p-2 p-sm-3 mb-2 mb-sm-3 d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-2 flex-grow-1" style="min-width: 0;">
+            <label class="small text-secondary fw-semibold mb-0 extra-small text-nowrap">DOCUMENT:</label>
+            <select class="form-select form-select-sm flex-grow-1 text-truncate" id="chatDocSelector">
+                {% for doc in documents %}
+                    <option value="{{ doc.id }}" {% if active_doc and doc.id == active_doc.id %}selected{% endif %}>
+                        {{ doc.original_name }} ({{ doc.num_pages }} pages)
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            {% if active_doc %}
+            <a href="{{ url_for('reader', doc_id=active_doc.id) }}" class="btn-secondary-clean btn-sm py-1 px-2 px-sm-3 extra-small">
+                <i data-lucide="book-open" style="width: 14px; height: 14px;"></i>
+                <span class="d-none d-sm-inline">Open in Reader</span>
+                <span class="d-sm-none">Reader</span>
+            </a>
+            {% endif %}
+            <button type="button" class="btn-secondary-clean btn-sm py-1 px-2 px-sm-3 extra-small text-danger" id="btnClearChat" title="Clear conversation">
+                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                <span>Clear</span>
+            </button>
+            <button type="button" class="btn-secondary-clean btn-sm py-1 px-2 px-sm-3 extra-small" id="btnExportChat" title="Copy conversation">
+                <i data-lucide="share" style="width: 14px; height: 14px;"></i>
+                <span>Export</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Message Container -->
+    <div class="card-clean flex-1 d-flex flex-column overflow-hidden" style="flex: 1;">
+        <div class="chat-messages p-4 flex-1 overflow-auto" id="chatMessages">
+            <div class="chat-bubble-row assistant">
+                <div class="chat-bubble assistant">
+                    <div class="fw-semibold text-primary extra-small mb-1">DocuMind AI</div>
+                    <div class="markdown-body">
+                        {% if active_doc %}
+                            Hello! I am ready to answer questions about <strong>{{ active_doc.original_name }}</strong> ({{ active_doc.num_pages }} pages).
+                            Answers are strictly grounded in your document's text with page citations.
+                        {% else %}
+                            Please upload or select a document to start chatting.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggested Questions Pills -->
+        <div class="px-3 py-2 border-top bg-light" id="suggestedQuestionsWrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+            <div class="d-flex flex-nowrap gap-2">
+                <button type="button" class="btn btn-sm btn-light border py-1 px-2 extra-small text-secondary prompt-suggestion-btn text-nowrap">
+                    What is the main objective of this document?
+                </button>
+                <button type="button" class="btn btn-sm btn-light border py-1 px-2 extra-small text-secondary prompt-suggestion-btn text-nowrap">
+                    Summarize key rules and conclusions
+                </button>
+                <button type="button" class="btn btn-sm btn-light border py-1 px-2 extra-small text-secondary prompt-suggestion-btn text-nowrap">
+                    What are the key steps explained?
+                </button>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="px-4 py-2 bg-light d-none align-items-center gap-2 border-top" id="chatTypingIndicator">
+            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <span class="extra-small text-secondary fw-semibold">Gemini is searching document & composing answer...</span>
+        </div>
+
+        <!-- Input Bar -->
+        <div class="p-3 border-top bg-surface">
+            <form id="chatForm" class="m-0">
+                <div class="ai-input-box">
+                    <textarea 
+                        id="chatInput" 
+                        class="ai-textarea" 
+                        placeholder="{% if active_doc %}Ask anything about {{ active_doc.original_name }}... (Enter to send, Shift+Enter for newline){% else %}Upload or select a document...{% endif %}"
+                        rows="1"
+                        {% if not active_doc %}disabled{% endif %}
+                    ></textarea>
+                    <button type="submit" class="ai-send-btn" id="chatSendBtn" {% if not active_doc %}disabled{% endif %}>
+                        <i data-lucide="arrow-up" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+});
+</script>
+{% endblock %}
