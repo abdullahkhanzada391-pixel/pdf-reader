@@ -1,4 +1,4 @@
 @echo off
-echo Starting AI PDF Assistant...
-"C:\Users\Ocean Developers LTD\.local\venvs\ai-pdf-assistant\Scripts\python.exe" "%~dp0app.py"
+echo Starting DocuMind AI Node.js server on http://127.0.0.1:5000...
+node "%~dp0server.js"
 pause

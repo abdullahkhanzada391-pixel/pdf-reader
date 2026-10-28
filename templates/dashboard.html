@@ -95,7 +95,7 @@
                                     <span class="small text-secondary">{{ doc.formatted_size }}</span>
                                 </td>
                                 <td class="d-none d-lg-table-cell">
-                                    <span class="small text-muted">{{ doc.created_at[:10] }}</span>
+                                    <span class="small text-muted">{{ doc.created_date or doc.created_at }}</span>
                                 </td>
                                 <td class="text-end">
                                     <div class="dropdown">
