@@ -1,6 +1,6 @@
 # DocuMind AI – Minimal AI PDF Workspace
 
-A modern, minimal, professional **AI-Powered PDF Workspace** built with **Python Flask**, **Inter typography**, **Lucide icons**, **PDF.js**, and the official **Google Gemini API** (`google-genai` SDK).
+A modern, minimal, professional **AI-Powered PDF Workspace** built with **Node.js**, **Express**, **Nunjucks**, **Lucide icons**, **PDF.js**, and the official **Google Gemini API** (`@google/genai` SDK).
 
 The application provides a seamless SaaS reading and analysis workflow: **Upload PDF → Open Document → Read PDF → Ask AI Questions → Get Summaries & Key Points → Auto-Save Notes**.
 
@@ -41,7 +41,7 @@ The application provides a seamless SaaS reading and analysis workflow: **Upload
     - Suggested question prompts.
   - **Summary**: Executive summarizer using Gemini with Detailed, Short, and Topics formats + Copy button.
   - **Key Points**: Extract essential takeaways in clean bullet format + Copy button.
-  - **Notes**: Auto-saving scratchpad for thoughts, quotes, or highlights that saves to SQLite in real time.
+  - **Notes**: Auto-saving scratchpad for thoughts, quotes, or highlights in real time.
 - Independently collapsible panels so users can focus on reading or AI analysis.
 
 ### 4. My Documents (`/documents`)
@@ -58,7 +58,7 @@ The application provides a seamless SaaS reading and analysis workflow: **Upload
 - Clear chat & Export transcript to clipboard.
 
 ### 6. Settings (`/settings`)
-- **AI Provider**: Gemini connection status, model selector (`gemini-3.5-flash`), API key configuration with visibility toggle, live test connection ping.
+- **AI Provider**: Gemini connection status, model selector (`gemini-2.5-flash`), API key configuration with visibility toggle, live test connection ping.
 - **Preferences**: Default PDF viewer fit mode, AI response detail style.
 - **Application**: Version, runtime info, maximum upload size limit (32MB).
 
@@ -68,32 +68,44 @@ The application provides a seamless SaaS reading and analysis workflow: **Upload
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/reader/<doc_id>` | Three-panel PDF reader workspace |
-| `POST` | `/api/upload` | Upload PDF files and extract text |
+| `GET` | `/reader/:doc_id` | Three-panel PDF reader workspace |
+| `POST` | `/api/documents/upload` | Upload PDF files and extract text |
 | `GET` | `/api/documents` | List all documents with metadata |
-| `GET` | `/api/documents/<id>` | Get document details and chunks |
-| `POST` | `/api/documents/<id>/rename` | Rename document display name |
-| `GET` | `/api/documents/<id>/notes` | Get saved notes for document |
-| `POST` | `/api/documents/<id>/notes` | Auto-save notes for document |
-| `GET` | `/api/documents/<id>/file` | Serve PDF file for viewer / download |
-| `DELETE`| `/api/documents/<id>` | Delete document file and database records |
-| `POST` | `/api/chat` | Send query to Gemini with RAG chunk retrieval |
-| `POST` | `/api/chat/clear` | Clear conversation history for session |
-| `POST` | `/api/summary` | Generate executive summary with caching |
-| `POST` | `/api/key-points` | Extract bullet-point takeaways |
+| `GET` | `/api/documents/:id` | Get document details and chunks |
+| `POST` | `/api/documents/:id/rename` | Rename document display name |
+| `GET` | `/api/documents/:id/file` | Serve PDF file for viewer / download |
+| `DELETE`| `/api/documents/:id` | Delete document file and records |
+| `POST` | `/api/chat/:doc_id/message` | Send query to Gemini with RAG chunk retrieval |
+| `DELETE`| `/api/chat/:doc_id/history` | Clear conversation history |
+| `POST` | `/api/documents/:doc_id/summarize` | Generate executive summary |
+| `POST` | `/api/documents/:doc_id/key-points` | Extract bullet-point takeaways |
+| `POST` | `/api/documents/:doc_id/practice-questions` | Generate practice questions |
+| `POST` | `/api/documents/:doc_id/explain-concept` | Explain concept from document |
 | `GET` | `/api/settings` | Get configuration status |
 | `POST` | `/api/settings` | Update API key and model |
-| `POST` | `/api/settings/test-api`| Ping Gemini API to test connectivity |
+| `POST` | `/api/settings/test-api` | Ping Gemini API to test connectivity |
 
 ---
 
-## 🚀 Running the Server
+## 🚀 Running the Server Locally
 
 Start the application:
-```powershell
-& "C:\Users\Ocean Developers LTD\.local\venvs\ai-pdf-assistant\Scripts\python.exe" app.py
+```bash
+npm start
 ```
-Or double-click `run.bat` / run `.\run.ps1`.
+Or use the automation script:
+```powershell
+.\run.ps1
+```
 
 Open in your browser:
 **`http://127.0.0.1:5000`**
+
+---
+
+## ☁️ Deployment (Vercel)
+
+This project is configured out-of-the-box for Vercel deployment:
+- Entry point: `api/index.js` (Express Serverless Function)
+- Routing: `vercel.json`
+- In Vercel Project Settings, add your `GEMINI_API_KEY` under **Environment Variables**.
