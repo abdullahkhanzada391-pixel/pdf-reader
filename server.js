@@ -21,6 +21,17 @@ Store.loadData();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Vercel rewrite URL normalizer (handles 'x-matched-path' header so Express routes match original paths)
+app.use((req, res, next) => {
+  const matchedPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'];
+  if (matchedPath) {
+    req.url = matchedPath;
+  } else if (req.url === '/api/index.js' || req.url === '/api/index') {
+    req.url = '/';
+  }
+  next();
+});
+
 // Serve static assets
 app.use('/static', express.static(path.join(Config.BASE_DIR, 'static')));
 
