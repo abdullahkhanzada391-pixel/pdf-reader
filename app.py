@@ -11,8 +11,13 @@ from services.pdf_service import PDFService
 from services.retrieval_service import RetrievalService
 from services.ai_service import AIService
 
-# Initialize Flask App
-app = Flask(__name__)
+# Initialize Flask App with explicit template and static paths
+app = Flask(
+    __name__,
+    template_folder=str(Config.BASE_DIR / "templates"),
+    static_folder=str(Config.BASE_DIR / "static"),
+    static_url_path="/static"
+)
 app.config.from_object(Config)
 
 # Ensure folders exist and initialize SQLite database
@@ -206,12 +211,26 @@ def view_document_file(document_id: str):
     doc = DocumentService.get_document(document_id)
     if not doc:
         return jsonify({"success": False, "error": "Document not found"}), 404
-    return send_from_directory(
-        directory=str(Config.UPLOAD_FOLDER),
-        path=doc["filename"],
-        as_attachment=False,
-        mimetype="application/pdf"
-    )
+    
+    filename = doc["filename"]
+    # 1. Check primary UPLOAD_FOLDER (e.g. /tmp/uploads on Vercel)
+    if (Config.UPLOAD_FOLDER / filename).exists():
+        return send_from_directory(
+            directory=str(Config.UPLOAD_FOLDER),
+            path=filename,
+            as_attachment=False,
+            mimetype="application/pdf"
+        )
+    # 2. Check repo uploads folder (for pre-seeded documents bundled in repo)
+    repo_uploads = Config.BASE_DIR / "uploads"
+    if (repo_uploads / filename).exists():
+        return send_from_directory(
+            directory=str(repo_uploads),
+            path=filename,
+            as_attachment=False,
+            mimetype="application/pdf"
+        )
+    return jsonify({"success": False, "error": "File not found on server"}), 404
 
 @app.route("/api/documents/<document_id>", methods=["DELETE"])
 def delete_document(document_id: str):

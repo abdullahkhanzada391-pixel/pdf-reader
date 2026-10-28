@@ -166,10 +166,21 @@ class DocumentService:
         if not doc:
             return False
             
-        file_path = Path(doc["file_path"])
-        if file_path.exists():
+        filename = doc.get("filename")
+        if filename:
+            for folder in [Config.UPLOAD_FOLDER, Config.BASE_DIR / "uploads"]:
+                target = folder / filename
+                if target.exists():
+                    try:
+                        target.unlink()
+                    except OSError:
+                        pass
+
+        # Also check file_path column if valid
+        raw_path = Path(doc.get("file_path", ""))
+        if raw_path.exists():
             try:
-                file_path.unlink()
+                raw_path.unlink()
             except OSError:
                 pass
                 
